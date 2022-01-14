@@ -2,22 +2,21 @@
 <h2 align="center"> 
  
   ## Goal
- Using **compressed data** and **quantization** techniques to lessen the solving time in 0/1 knapsack problem with **acceptable deviation rate** from optimal solution.  
+ Compare performance (**elapsed time**, **scalability** in multi-threading) of consecutive operations in memory management with **lock (with mutex)** and **lock-free (atomic operation provided since c++11)** version. 
  
   ## Introduction
-  
-**Dynamic programming (DP)** is one of efficient way to solve 0/1 knapsack problem (**maximization problem with constraint**). However, when the selected items and contraint become larger, it **increases computation time** and **takes more memory to store the result of subproblem**. In real case, the weights (cost) distribution of items is **not uniform**. Normally, the distribution is skewed toward the lower half of the possible range of the weights. I utilize this characteristics and make some items with small cost to merge into one new item with bigger cost, resulting in smaller number of items being considered.
-
-  
+Memory management is one of critical part in OS kernel service. It allocates memory buffer to function and ensure the memory buffer allocated could not be allocated to another function until function releases the ownership of that memory buffer. When systems run in multi-threading mode, ideally, memory management should run under critical section, preventing two threads modify the information in memory management at the same time, resulting in **race condition**. Therefore, **synchronization techniques** are required in this scenario. 
   
   ## Description
-First, I create a binomial tree to each bucket of weights (e.g., bucket1: [w:1 - w:9], bucket2: [w:10 - w:19],...). The reason of choosing **binomial heap** to record items is because it only takes **O(1) time** for **deleting**, **inserting**, and **merging operation**. Second, traverse the heaps to search if there are possible sub-heaps that could be merged into the bucket with higher range of cost. After compression, I also quantized the cost in the same bucket to trim some variability in weights, accelerating the process in solving problem.
+In this project, I used two ways of synchronization to implement memory management service, which are **mutex** and **atomic operation**. The main difference between lock and lock-free synchronization techniques is wheather threads are racing to seize the lock or just load and store variables stores in atomic memory buffer without any seizing and waiting. However, the disavantage of atomic operation is that when atomic store (std::atomic_store(...))is not successful, the subsequent cost is to re-do the whole operation again.<br>
+ I choose **singly linked list** to implement memory buffer in order to reduce the memory quantity being modified when processing memory allocation and deallocation, which benefits the easiness in implementing the lock-free memory management service. Nevertheless, in mutex version, it is expected to be implemented in much more complexed data structure, e.g., **balanced binary search tree** or **B-tree**. Because the main purpose is performance comparison in this project, I choose the simple data structure to implement two version of memory management.
+ 
  <p align="center">
  <img src="https://github.com/ychuang1234/lock-free-dynamic-memroy--de-allocation-with-variable-size/blob/b24fa924e98c27b3ac28f8997d653ac91f57cf57/procedure.JPG" width="75%" height="75%">
- </p>
+ </p> 
  
-## Overall result
-When the weights distribution is skewed more toward lower part of the possible range of weights, the compression rate become higher and the reduction rate of the elapsed time become higher. And the obtimality of the result is still retained around 95% of the optimal solution.
+## Experiment settings and detailed results
+In this project, I designed stress tests with different number of trasaction and number of threads (number of p_thread in C or thread number assigned to OpenMP in C++). The results are shown below:
 
  * Allocation : Deallocation = 10:0
   
@@ -40,20 +39,31 @@ When the weights distribution is skewed more toward lower part of the possible r
 | Multi-threading settings   | Mutex (lock) Elapsed time (sec)<br> (Transaction num: 100, 1000, 10000)| Atomic (lock free) Elapsed time (sec)<br>  (Transaction num: 100, 1000, 10000)
 | ----------- |:----------:| :--------------:  
 | Thread 2       | 0.002, 0.002, 0.002 | 0.003, 0.013, 0.187  
-| Thread 3       | 0.001, 0.004, 0.004 | 0.002, 0.036, 0.187 
+| Thread 3       | 0.001, 0.004, 0.004 | 0.002, 0.036, 0.190 
 | Thread 4       | 0.003, 0.002, 0.004 | 0.004, 0.026, 0.195 
-## Experiment settings and detailed results
-
-This is the output from .ipynb file with various experiment settings.
+ 
+ * Line chart of memory (de)allocation performance under setting **Allocation : Deallocation = 10:0**
 <p align="center">
  <img src="https://github.com/ychuang1234/lock-free-dynamic-memroy--de-allocation-with-variable-size/blob/b24fa924e98c27b3ac28f8997d653ac91f57cf57/result1.JPG " height="80%">
  </p>
  
+  * Line chart of memory (de)allocation performance under setting **Allocation : Deallocation = 7.5:2.5**
 <p align="center">
  <img src="https://github.com/ychuang1234/lock-free-dynamic-memroy--de-allocation-with-variable-size/blob/b24fa924e98c27b3ac28f8997d653ac91f57cf57/result2.JPG " height="80%">
  </p>
-  
+ 
+ 
+   * Line chart of memory (de)allocation performance under setting **Allocation : Deallocation = 5:5**
   <p align="center">
- <img src="https://github.com/ychuang1234/lock-free-dynamic-memroy--de-allocation-with-variable-size/blob/b24fa924e98c27b3ac28f8997d653ac91f57cf57/result3.JPG " height="80%">
+ <img src="https://github.com/ychuang1234/lock-free-dynamic-memroy--de-allocation-with-variable-size/blob/df953519fdfde2816836c241c6de687e44494ae9/result3.JPG " height="80%">
  </p>
 
+## Findings
+* Memory management with mutex outperformed lock-free version
+ 
+   * Possible reason 1: Collision in stress test is highly likely to happen.
+   * Possible reason 2: Retrying costs substancially compared to waiting and blocking.
+ * However, could stress test be considered as the true scenario when kernel processing system call? 
+   * We may need to take the real severity of collision in memory management (especially time calling the memory management system call) into consideration.
+   * When the collision is not that high, the benefit of using atomic operation may be appeared.
+ 
