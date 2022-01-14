@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <time.h>
+#include <math.h>
 typedef struct list_node_s{
     int sa;
     int sz;
@@ -15,6 +16,7 @@ typedef struct record_node_s{
     int data;
 }record_node_s;
 void *thread_function(void *);
+void *threaded_task(void *);
 int mAlloc(record_node_s* tmp);
 int mDalloc(record_node_s* tmp);
 int n;                 //initial memory size 
@@ -22,13 +24,13 @@ int m;                 //number of operations in each execution
 float m_malloc_frac;   //member fraction
 pthread_mutex_t mutex, mutex1;
 int count, count_m, count_i, count_d = 0;
-int m_malloc;
+int m_malloc,m_malloc_thread;
 int thread_count;   //number of threads
 struct list_node_s* head_p = NULL;
 struct record_node_s * record = NULL;
 
 int main(int argc, char* argv[]){
-    long thread;
+    int thread;
     pthread_t* thread_handles;
     clock_t start, end;
     double cpu_time_used;
@@ -48,6 +50,8 @@ int main(int argc, char* argv[]){
     m = (int) strtol(argv[3], NULL, 10);
     m_malloc_frac = (float) atof(argv[4]);
     m_malloc = m * m_malloc_frac;
+    m_malloc_thread = m_malloc/ thread_count;
+    printf("Total num: %i,thread: %i,malloc num: %i\n",m,thread_count,m_malloc);
     /*
     if(n < 0 || m < 0 || m_member_frac < 0 || m_insert_frac < 0 || m_delete_frac < 0 || (int)(m_member_frac+m_insert_frac+m_delete_frac)!= 1){
         //error
@@ -75,10 +79,14 @@ int main(int argc, char* argv[]){
     pthread_mutex_init(&mutex, NULL);
     pthread_mutex_init(&mutex1, NULL);
     int result;
-    for (thread = 0; thread < thread_count; thread++){
-        result = pthread_create(&thread_handles[thread], NULL, thread_function,  &thread);
+    for (thread = 0; thread < thread_count;thread++){
+        //printf("Create num %i thread\n",(int)thread);
+        result = pthread_create(&thread_handles[thread], NULL, thread_function, &thread);
+        if (result) {
+            printf("ERROR: return code from pthread_create() is %d\n", result);
+            exit(-1);
+        }
     }
- 
     for (thread = 0; thread < thread_count; thread++){
         //printf("Wait %i. %p\n",thread,thread_handles[thread]);
         void *retval;
@@ -91,18 +99,53 @@ int main(int argc, char* argv[]){
     while(node!=NULL){
         printf("SA: %i, SZ: %i\n",node->sa,node->sz);
         node = node->next;
-    }
-    
+    }    
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
     printf("execution time is : %f\n", cpu_time_used);
     free(thread_handles);
     return 0;
 }
-void *thread_function(void* rank){ 
-    //printf("Thread %i in function\n",*(int*)rank);
+void *task(int id) {
+  printf("Task %d started\n", id);
+  int i;
+  double result = 0.0;
+  for (i = 0; i < 1000000; i++) {
+    result = result + sin(i) * tan(i);
+  }
+  printf("Task %d completed with result %e\n", id, result);
+}
+
+void *threaded_task(void *t) {
+	int rank;
     pthread_mutex_lock( &mutex1 ); 
-    int i = count++;
+    rank = count++;
     pthread_mutex_unlock( &mutex1 ); 
+    long id = *(long*) t;
+    printf("Thread %ld started\n", id);
+
+	int i = rank*m_malloc_thread;
+    for (;i<(rank+1)*m_malloc_thread;i++){
+        pthread_mutex_lock( &mutex );    
+        mAlloc(&record[i]);
+        pthread_mutex_unlock( &mutex );
+	}
+    task(id);
+	i = rank*m_malloc_thread;
+    for (;i<(rank+1)*m_malloc_thread;i++){
+        pthread_mutex_lock( &mutex );    
+        mDalloc(&record[i]);
+        pthread_mutex_unlock( &mutex ); 
+	}
+    printf("Thread %ld done\n", id);
+    pthread_exit(0);
+}
+
+void *thread_function(void * tmp){
+    int i;    
+    pthread_mutex_lock( &mutex1 ); 
+    i = count++;
+    pthread_mutex_unlock( &mutex1 ); 
+    //printf("Thread %i in function (%i,%i)\n",rank,rank*m_malloc_thread,(rank+1)*m_malloc_thread);
     while(i < m){
         //only one thread can get access to the linked-list at a time
         if(i < m_malloc){
@@ -121,13 +164,13 @@ void *thread_function(void* rank){
         pthread_mutex_lock( &mutex1 ); 
         i = count++;
         pthread_mutex_unlock( &mutex1 ); 
-        
+       
     }
     return NULL;
 }
 //mem alloc: in critical section
 int mAlloc(record_node_s* tmp){
-    //printf("Mem Alloc with size: %i\n",tmp->sz);
+    //printf("Mem %i Alloc with size\n",tmp->sz);
     struct list_node_s* curr_p = head_p;
     struct list_node_s* pred_p = head_p;
     while(curr_p != NULL && curr_p->sz < tmp->sz){
@@ -153,6 +196,7 @@ int mAlloc(record_node_s* tmp){
     else{
         return 1;
     }
+
 }
 //mem dealloc function: in critical section
 int mDalloc(record_node_s* tmp){

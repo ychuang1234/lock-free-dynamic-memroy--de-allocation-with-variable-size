@@ -5,6 +5,8 @@
 #include <assert.h>
 #include <string>
 #include <iostream>
+#include <stdlib.h>
+#include <time.h>
 typedef struct block_header{
 	int sa;
 	int sz;
@@ -125,8 +127,8 @@ public:
 		std::shared_ptr<node<T>> it_node = it.node();
 		prev_ = it_node;
 		//First fit:
-		printf("Request size: %d\n",sz);
-		while(it!=end()){			
+		//printf("Request size: %d\n",sz);
+		while(it!=end()){
 			if (*(it_node->size())>sz) break;
 			prev_ = it_node;
 			it_node = (++it).node();
@@ -138,7 +140,7 @@ public:
 			return result;
 		}
 		int new_size_ = *(it.node()->size()) - sz;
-		printf("New sa: %d, New size:%d\n",*(it.node()->show_start_addr()),new_size_);
+		//printf("New sa: %d, New size:%d\n",*(it.node()->show_start_addr()),new_size_);
 		std::shared_ptr <int> sz_ (new int(new_size_));
 		std::shared_ptr <int> sa_(new int(*(it.node()->show_start_addr())));
 		auto n = std::make_shared<node<T>>(nullptr,sa_,sz_,std::make_shared<const T>(std::forward<P>(p)...));
@@ -165,7 +167,7 @@ public:
 	int release(int&result,pblock_header record,P&&... p){
 		slist_iterator<T> it = begin();
 		std::shared_ptr<node<T>> it_node = it.node();
-		printf("\n Release: sa->%d, sz->%d \n",record->sa, record->sz);
+		//printf("\n Release: sa->%d, sz->%d \n",record->sa, record->sz);
 		while (it!=end()){
 			if (*(it.node()->show_start_addr())+ *(it.node()->size())<= record->sa){
 				prev_ = it_node;
@@ -174,7 +176,7 @@ public:
 					slist_iterator<T> it_next = node_it(++it);
 					//printf("start addr: %d, end?: %d\n",*(it_next.node()->show_start_addr()),it==end());
 					if (*(it_next.node()->show_start_addr()) > record->sa+record->sz){ //case 1: create new node, and insert after the avail block before it
-						printf("\n Case 1: \n");
+						//printf("\n Case 1: \n");
 						std::shared_ptr <int> sz_ (new int(record->sz));
 						std::shared_ptr <int> sa_(new int(record->sa));
 						std::shared_ptr<node<T>> tmp = it_next.node_;
@@ -188,7 +190,7 @@ public:
 						replace_node(result,it_node,m);
 						break;
 					}else if(*(it_next.node()->show_start_addr()) == record->sa+record->sz){ //case 2: merge into the avail block after it
-						printf("\n Case 2: \n");
+						//printf("\n Case 2: \n");
 						std::shared_ptr<node<T>> tmp = it_next.node()->next();
 						std::shared_ptr <int> sa_ (new int(record->sa));
 						std::shared_ptr <int> sz_(new int(*(it_next.node()->size())+record->sz));
@@ -207,7 +209,7 @@ public:
 
 					}
 				}else{ //case 3: add new node into the last of avail list
-					printf("\n Case 3: \n");
+					//printf("\n Case 3: \n");
 					std::shared_ptr <int> sz_ (new int(record->sz));
 					std::shared_ptr <int> sa_(new int(record->sa));
 					auto n = std::make_shared<node<T>>(nullptr,sa_,sz_,std::make_shared<const T>(std::forward<P>(p)...));
@@ -247,12 +249,12 @@ public:
 		result = 0;
 		if (obj==head_) {
 			h = std::atomic_compare_exchange_strong(&head_,&obj,expected);
-			printf("Replace head : %d\n",h);
+			//printf("Replace head : %d\n",h);
 			if (h) result = 1;
 
 		}else{
 			n = std::atomic_compare_exchange_strong(&prev_->next_,&obj,expected);
-			printf("Replace node : %d\n",n);
+			//printf("Replace node : %d\n",n);
 			if (n) result = 1;
 		}
 
@@ -282,80 +284,51 @@ private:
 	slist& operator=(const slist&&) ;
 };
 
-int main(){
+int main(int argc, char*argv[]){
 	int size = 1<<10;
+	clock_t start,end;
+	double cpu_time_used;
+	srand(time(NULL));
+	if (argc != 6){
+		//error in input values
+		fprintf(stderr, "error in input format. correct format: <thread_count> <n> <m> <m_malloc_frac> <m_mdalloc_frac> \n");
+		exit(0);
+	}
+	int thread_count = strtol(argv[1], NULL, 10);
+	if (thread_count <= 0){
+		fprintf(stderr, "error. thread count should be greater than 0\n");
+		exit(0);
+	}
+	size = (int) strtol(argv[2], NULL, 10);
+	int m = (int) strtol(argv[3], NULL, 10);
+	float m_malloc_frac = (float) atof(argv[4]);
+	int m_malloc = (int)(m * m_malloc_frac);
+	printf("Total num: %i,thread: %i,malloc num: %i\n",m,thread_count,m_malloc);
 	slist<std::string> s(size,std::string("Start"));
-	int sz [] = {4,8,32,64,128,256};
-	std::string name [] = {"A","B","C","D","E","F"};
-	block_header record[6];
+	int* sz = new int [m_malloc];
 	int i,j;
-	#pragma omp parallel for
-	for(i=0;i<6;i++){
-		j = s.malloc(&record[i],sz[i],name[i]);
-		if (j<1){
-			printf("\n Malloc #%i Failure!\n",i);
-		}else{
-			printf("\n Malloc #%d Success!\n",i);
-		}
+	for (i=0;i<m_malloc;i++){
+		sz[i] = 1<<rand()%3;
 	}
-	for (auto& pstr : s){
-		std::cout << pstr<< " ";
-	}
-	std::cout<<std::endl;
-	//printf("\n ABC\n");
-	#pragma omp parallel for
-	for(i=0;i<6;i++){
-		j = s.demalloc(&record[i],name[i]);
-		if (j<1){
-			printf("\n DeMalloc #%d Failure!\n",i);
-		}else{
-			printf("\n DeMalloc #%d Success!\n",i);
-		}
-	}
-	/*
-	std::cout<<std::endl;
-	bool result;
-	j = s.demalloc(&record[0],"E");
-	if (j<1){
-		printf("DeMalloc Failure!\n");
-	}else{
-		printf("DeMalloc Success!\n");
-	}
-	for (auto& pstr : s){
-		std::cout << pstr<< " ";
-	}
-	std::cout<<std::endl;
-	j = s.demalloc(&record[2],"F");
-	if (j<1){
-		printf("DeMalloc Failure!\n");
-	}else{
-		printf("DeMalloc Success!\n");
-	}
-	for (auto& pstr : s){
-		std::cout << pstr<< " ";
-	}
-	std::cout<<std::endl;
-
-	j = s.demalloc(&record[1],"G");
-	if (j<1){
-		printf("DeMalloc Failure!\n");
-	}else{
-		printf("DeMalloc Success!\n");
-	}
-	for (auto& pstr : s){
-		std::cout << pstr<< " ";
-	}
-	std::cout<<std::endl;
+	std::string name = "example";
+	block_header* record = new block_header[m_malloc];
 	
-	j = s.demalloc(&record[3],"H");
-	if (j<1){
-		printf("DeMalloc Failure!\n");
-	}else{
-		printf("DeMalloc Success!\n");
+	start = clock();
+	#pragma omp parallel for num_threads(thread_count)
+	for(i=0;i<m_malloc;i++){
+		j = s.malloc(&record[i],sz[i],name);
 	}
-	*/
+	#pragma omp parallel for num_threads(thread_count)
+	for(i=0;i<m-m_malloc;i++){
+		j = s.demalloc(&record[i],name);
+	}
+	end = clock();
 	for (auto& pstr : s){
 		std::cout << pstr<< " ";
 	}
 	std::cout<<std::endl;
+	cpu_time_used = ((double) (end-start))/ CLOCKS_PER_SEC;
+	printf("execution time is %f\n",cpu_time_used);
+	delete [] record;
+	delete [] sz;
 }
