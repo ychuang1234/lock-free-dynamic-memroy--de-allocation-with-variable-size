@@ -2,7 +2,7 @@
 <h2 align="center"> 
  
   ## Goal
- Using **compressed data** and **quantization** techniques to lessen the solving time in 0/1 knapsack problem with **acceptable deviation rate** from optimal solution.  
+ Compare performance (**elapsed time**, **scalability** in multi-threading) of consecutive operations in memory management with lock(with mutex) and lock-free (atomic operation provided since c++11) version. 
  
   ## Introduction
   
@@ -16,7 +16,7 @@ First, I create a binomial tree to each bucket of weights (e.g., bucket1: [w:1 -
  <img src="https://github.com/ychuang1234/lock-free-dynamic-memroy--de-allocation-with-variable-size/blob/b24fa924e98c27b3ac28f8997d653ac91f57cf57/procedure.JPG" width="75%" height="75%">
  </p>
  
-## Overall result
+## Experiment settings and detailed results
 When the weights distribution is skewed more toward lower part of the possible range of weights, the compression rate become higher and the reduction rate of the elapsed time become higher. And the obtimality of the result is still retained around 95% of the optimal solution.
 
  * Allocation : Deallocation = 10:0
@@ -40,20 +40,25 @@ When the weights distribution is skewed more toward lower part of the possible r
 | Multi-threading settings   | Mutex (lock) Elapsed time (sec)<br> (Transaction num: 100, 1000, 10000)| Atomic (lock free) Elapsed time (sec)<br>  (Transaction num: 100, 1000, 10000)
 | ----------- |:----------:| :--------------:  
 | Thread 2       | 0.002, 0.002, 0.002 | 0.003, 0.013, 0.187  
-| Thread 3       | 0.001, 0.004, 0.004 | 0.002, 0.036, 0.187 
+| Thread 3       | 0.001, 0.004, 0.004 | 0.002, 0.036, 0.190 
 | Thread 4       | 0.003, 0.002, 0.004 | 0.004, 0.026, 0.195 
-## Experiment settings and detailed results
-
-This is the output from .ipynb file with various experiment settings.
+ 
+ * Line chart of memory (de)allocation performance under setting **Allocation : Deallocation = 10:0**
 <p align="center">
  <img src="https://github.com/ychuang1234/lock-free-dynamic-memroy--de-allocation-with-variable-size/blob/b24fa924e98c27b3ac28f8997d653ac91f57cf57/result1.JPG " height="80%">
  </p>
  
+  * Line chart of memory (de)allocation performance under setting **Allocation : Deallocation = 7.5:2.5**
 <p align="center">
  <img src="https://github.com/ychuang1234/lock-free-dynamic-memroy--de-allocation-with-variable-size/blob/b24fa924e98c27b3ac28f8997d653ac91f57cf57/result2.JPG " height="80%">
  </p>
-  
+ 
+ 
+   * Line chart of memory (de)allocation performance under setting **Allocation : Deallocation = 5:5**
   <p align="center">
- <img src="https://github.com/ychuang1234/lock-free-dynamic-memroy--de-allocation-with-variable-size/blob/b24fa924e98c27b3ac28f8997d653ac91f57cf57/result3.JPG " height="80%">
+ <img src="https://github.com/ychuang1234/lock-free-dynamic-memroy--de-allocation-with-variable-size/blob/df953519fdfde2816836c241c6de687e44494ae9/result3.JPG " height="80%">
  </p>
 
+## Findings
+Stress test on memory allocation and deallocation provides the scenario  
+ 
