@@ -65,5 +65,5 @@ In this project, I designed stress tests with different number of trasaction and
    * Possible reason 2: Retrying costs substancially compared to waiting and blocking.
  * However, is stress test could be considered as the true scenarion when kernel processing system call? 
    * We may need to take the real severity of collision in memory management (especially time calling the memory management system call) into consideration.
-  * When the collision is not that high, the benefit of using atomic operation may be appeared.
+   * When the collision is not that high, the benefit of using atomic operation may be appeared.
  
