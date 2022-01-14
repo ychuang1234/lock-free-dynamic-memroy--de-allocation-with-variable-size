@@ -2,13 +2,13 @@
 <h2 align="center"> 
  
   ## Goal
- Compare performance (**elapsed time**, **scalability** in multi-threading) of consecutive operations in memory management with lock (with mutex) and lock-free (atomic operation provided since c++11) version. 
+ Compare performance (**elapsed time**, **scalability** in multi-threading) of consecutive operations in memory management with **lock (with mutex)** and **lock-free (atomic operation provided since c++11)** version. 
  
   ## Introduction
-Memory management is one of critical part in OS kernel service. It allocates memory buffer to function and ensure the memory buffer allocated could not be allocated to another function until function releases the ownership of that memory buffer. When systems run in multi-threading mode, ideally, memory management should run under critical section, preventing two threads modify the information in memory management at the same time, resulting in **race condition**. Therefore, synchronization techniques are required in this scenario. 
+Memory management is one of critical part in OS kernel service. It allocates memory buffer to function and ensure the memory buffer allocated could not be allocated to another function until function releases the ownership of that memory buffer. When systems run in multi-threading mode, ideally, memory management should run under critical section, preventing two threads modify the information in memory management at the same time, resulting in **race condition**. Therefore, **synchronization techniques** are required in this scenario. 
   
   ## Description
-In this project, I used two ways of synchronization to implement memory management service, which are mutex and atomic operation. The main difference between lock and lock-free synchronization techniques is wheather threads are racing to seize the lock or just load and store variables stores in atomic memory buffer without any seizing and waiting. However, the disavantage of atomic operation is that when atomic store (std::atomic_store(...))is not successful, the subsequent cost is to re-do the whole operation again.<br>
+In this project, I used two ways of synchronization to implement memory management service, which are **mutex** and **atomic operation**. The main difference between lock and lock-free synchronization techniques is wheather threads are racing to seize the lock or just load and store variables stores in atomic memory buffer without any seizing and waiting. However, the disavantage of atomic operation is that when atomic store (std::atomic_store(...))is not successful, the subsequent cost is to re-do the whole operation again.<br>
  I choose **singly linked list** to implement memory buffer in order to reduce the memory quantity being modified when processing memory allocation and deallocation, which benefits the easiness in implementing the lock-free memory management service. Nevertheless, in mutex version, it is expected to be implemented in much more complexed data structure, e.g., **balanced binary search tree** or **B-tree**. Because the main purpose is performance comparison in this project, I choose the simple data structure to implement two version of memory management.
  
  <p align="center">
