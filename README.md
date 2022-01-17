@@ -12,7 +12,7 @@ In this project, I used two ways of synchronization to implement memory manageme
  I choose **singly linked list** to implement memory buffer in order to reduce the memory quantity being modified when processing memory allocation and deallocation, which benefits the easiness in implementing the lock-free memory management service. Nevertheless, in mutex version, it is expected to be implemented in much more complexed data structure, e.g., **balanced binary search tree** or **B-tree**. Because the main purpose is performance comparison in this project, I choose the simple data structure to implement two version of memory management.
  
  <p align="center">
- <img src="https://github.com/ychuang1234/lock-free-dynamic-memroy--de-allocation-with-variable-size/blob/b24fa924e98c27b3ac28f8997d653ac91f57cf57/procedure.JPG" width="75%" height="75%">
+ <img src="https://github.com/ychuang1234/lock-free-dynamic-memroy--de-allocation-with-variable-size/blob/b24fa924e98c27b3ac28f8997d653ac91f57cf57/procedure.JPG" width="100%" height="100%">
  </p> 
  
 ## Experiment settings and detailed results
