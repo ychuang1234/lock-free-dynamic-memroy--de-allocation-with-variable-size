@@ -16,7 +16,7 @@ In this project, I used two ways of synchronization to implement memory manageme
  </p> 
  
 ## Experiment settings and detailed results
-In this project, I designed stress tests with different number of trasaction and number of threads (number of p_thread in C or thread number assigned to OpenMP in C++). The results are shown below:
+In this project, I designed stress tests with different number of transaction and number of threads (number of p_thread in C or thread number assigned to OpenMP in C++). The results are shown below:
 
  * Allocation : Deallocation = 10:0
   
